@@ -30,9 +30,9 @@ describe('AppController (e2e)', () => {
         .get('/gasPrice')
         .expect(200)
         .expect((res) => {
-          expect(res.body).toHaveProperty('gasPrice');
-          expect(typeof res.body.gasPrice).toBe('string');
-          const gasPriceGwei = parseFloat(res.body.gasPrice);
+          expect(res.body).toHaveProperty('gasPriceInGwei');
+          expect(typeof res.body.gasPriceInGwei).toBe('string');
+          const gasPriceGwei = parseFloat(res.body.gasPriceInGwei);
 
           expect(gasPriceGwei).toBeGreaterThan(0);
           expect(gasPriceGwei).toBeLessThan(

@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ethers } from 'ethers';
+import { BigNumber, providers, utils } from 'ethers';
 
 /**
  * The GasService handles fetching and caching of the
@@ -10,7 +10,7 @@ import { ethers } from 'ethers';
 @Injectable()
 export class GasService implements OnModuleInit {
   private readonly logger = new Logger(GasService.name);
-  private provider: ethers.providers.JsonRpcProvider;
+  private provider: providers.JsonRpcProvider;
   private cachedGasPrice: string | null = null;
   private lastFetchTime: number = 0;
   private CACHE_TTL_MS: number = 0;
@@ -24,7 +24,7 @@ export class GasService implements OnModuleInit {
       process.exit(1);
     }
     const gasCacheTtl = this.configService.get<number>('gasCacheTtl');
-    this.provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    this.provider = new providers.JsonRpcProvider(rpcUrl);
     this.CACHE_TTL_MS = gasCacheTtl!;
 
     this.fetchAndCacheGasPrice(); // Fetching & Caching Gas Price on startup
@@ -39,9 +39,12 @@ export class GasService implements OnModuleInit {
   private async fetchAndCacheGasPrice() {
     try {
       const feeData = await this.provider.getFeeData();
-      const gasPriceWei = feeData.gasPrice;
-      if (gasPriceWei) {
-        this.cachedGasPrice = gasPriceWei.toString();
+      const gasPriceGwei = utils.formatUnits(
+        feeData.gasPrice as BigNumber,
+        'gwei',
+      );
+      if (gasPriceGwei) {
+        this.cachedGasPrice = gasPriceGwei.toString();
         this.lastFetchTime = Date.now();
         this.logger.log(`Gas price cached: ${this.cachedGasPrice}`);
       } else {

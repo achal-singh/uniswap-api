@@ -47,26 +47,31 @@ export class UniswapService implements OnModuleInit {
    * Fetches basic meta data of an ERC-20 Token from Ethereum.
    * */
   async getTokenInfo(tokenAddress: string): Promise<Partial<TokenDetails>> {
-    if (this.tokenCache.has(tokenAddress)) {
-      const data = this.tokenCache.get(tokenAddress)!;
-      this.tokenCache.delete(tokenAddress);
-      this.tokenCache.set(tokenAddress, data);
-      return data;
-    }
-    const contract = new Contract(tokenAddress, ERC20_ABI, this.provider);
-    const [decimals, symbol] = await Promise.all([
-      contract.decimals(),
-      contract.symbol(),
-    ]);
+    try {
+      if (this.tokenCache.has(tokenAddress)) {
+        const data = this.tokenCache.get(tokenAddress)!;
+        this.tokenCache.delete(tokenAddress);
+        this.tokenCache.set(tokenAddress, data);
+        return data;
+      }
+      const contract = new Contract(tokenAddress, ERC20_ABI, this.provider);
+      const [decimals, symbol] = await Promise.all([
+        contract.decimals(),
+        contract.symbol(),
+      ]);
 
-    // Assuming an LRU-cache size of 25
-    if (this.tokenCache.size >= 25) {
-      const leastUsed = this.tokenCache.keys().next().value;
-      this.tokenCache.delete(leastUsed);
-    }
+      // Assuming an LRU-cache size of 25
+      if (this.tokenCache.size >= 25) {
+        const leastUsed = this.tokenCache.keys().next().value;
+        this.tokenCache.delete(leastUsed);
+      }
 
-    this.tokenCache.set(tokenAddress, { decimals, symbol });
-    return { decimals, symbol };
+      this.tokenCache.set(tokenAddress, { decimals, symbol });
+      return { decimals, symbol };
+    } catch (error) {
+      this.logger.error(error.message);
+      throw new Error('Token address(es) are not valid ERC-20 Contracts.');
+    }
   }
 
   /**
@@ -76,31 +81,36 @@ export class UniswapService implements OnModuleInit {
    * @param toTokenAddress: Destination token address
    * */
   async getPairReserves(fromTokenAddress: string, toTokenAddress: string) {
-    const pairAddress: string = await this.uniswapV2Factory.getPair(
-      fromTokenAddress,
-      toTokenAddress,
-    );
-    if (pairAddress === ethers.constants.AddressZero) {
-      throw new Error('Uniswap V2 Pair does not exist for these tokens.');
+    try {
+      const pairAddress: string = await this.uniswapV2Factory.getPair(
+        fromTokenAddress,
+        toTokenAddress,
+      );
+      if (pairAddress === ethers.constants.AddressZero) {
+        throw new Error('Uniswap V2 Pair does not exist for these tokens.');
+      }
+
+      const pairContract = new Contract(
+        pairAddress,
+        UNISWAP_V2_PAIR_ABI,
+        this.provider,
+      );
+      const [reserve0, reserve1] = await pairContract.getReserves();
+      const [token0, token1] = await Promise.all([
+        pairContract.token0(),
+        pairContract.token1(),
+      ]);
+
+      return {
+        reserve0,
+        reserve1,
+        token0,
+        token1,
+      };
+    } catch (error) {
+      this.logger.error(error.message);
+      throw new Error('Something went wrong in getPairReserves().');
     }
-
-    const pairContract = new Contract(
-      pairAddress,
-      UNISWAP_V2_PAIR_ABI,
-      this.provider,
-    );
-    const [reserve0, reserve1] = await pairContract.getReserves();
-    const [token0, token1] = await Promise.all([
-      pairContract.token0(),
-      pairContract.token1(),
-    ]);
-
-    return {
-      reserve0,
-      reserve1,
-      token0,
-      token1,
-    };
   }
 
   /**
@@ -115,39 +125,47 @@ export class UniswapService implements OnModuleInit {
     toTokenAddress: string,
     amountIn: string,
   ) {
-    const { reserve0, reserve1, token0, token1 } = await this.getPairReserves(
-      fromTokenAddress.toLowerCase(),
-      toTokenAddress.toLowerCase(),
-    );
+    try {
+      const { reserve0, reserve1, token0, token1 } = await this.getPairReserves(
+        fromTokenAddress.toLowerCase(),
+        toTokenAddress.toLowerCase(),
+      );
 
-    const [token0Info, token1Info] = await Promise.all([
-      this.getTokenInfo(token0),
-      this.getTokenInfo(token1),
-    ]);
+      const [token0Info, token1Info] = await Promise.all([
+        this.getTokenInfo(token0),
+        this.getTokenInfo(token1),
+      ]);
 
-    let reserveIn: BigNumber;
-    let reserveOut: BigNumber;
-    let decimalIn: number;
-    let decimalOut: number;
+      let reserveIn: BigNumber;
+      let reserveOut: BigNumber;
+      let decimalIn: number;
+      let decimalOut: number;
 
-    // Determine which reserve corresponds to which token
-    if (token0.toLowerCase() === fromTokenAddress.toLowerCase()) {
-      reserveIn = reserve0;
-      reserveOut = reserve1;
-      decimalIn = token0Info.decimals as number;
-      decimalOut = token1Info.decimals as number;
-    } else if (token1.toLowerCase() === fromTokenAddress.toLowerCase()) {
-      reserveIn = reserve1;
-      reserveOut = reserve0;
-      decimalIn = token1Info.decimals as number;
-      decimalOut = token0Info.decimals as number;
-    } else {
-      throw new Error('Token addresses do not match the pair contract.');
+      // Determine which reserve corresponds to which token
+      if (token0.toLowerCase() === fromTokenAddress.toLowerCase()) {
+        reserveIn = reserve0;
+        reserveOut = reserve1;
+        decimalIn = token0Info.decimals as number;
+        decimalOut = token1Info.decimals as number;
+      } else if (token1.toLowerCase() === fromTokenAddress.toLowerCase()) {
+        reserveIn = reserve1;
+        reserveOut = reserve0;
+        decimalIn = token1Info.decimals as number;
+        decimalOut = token0Info.decimals as number;
+      } else {
+        throw new Error('Token addresses do not match the pair contract.');
+      }
+
+      const amountInWei = parseUnits(
+        parseFloat(amountIn).toFixed(6),
+        decimalIn,
+      );
+      const quote = amountInWei.mul(reserveOut).div(reserveIn);
+      return { quote, meta: { reserveOut, reserveIn, decimalIn, decimalOut } };
+    } catch (error) {
+      this.logger.error(error.message);
+      throw new Error('Something went wrong in getQuote().');
     }
-
-    const amountInWei = parseUnits(parseFloat(amountIn).toFixed(6), decimalIn);
-    const quote = amountInWei.mul(reserveOut).div(reserveIn);
-    return { quote, meta: { reserveOut, reserveIn, decimalIn, decimalOut } };
   }
 
   /**
@@ -162,7 +180,7 @@ export class UniswapService implements OnModuleInit {
     fromTokenAddress: string,
     toTokenAddress: string,
     amountIn: string,
-  ): Promise<string> {
+  ): Promise<string | void> {
     const [fromToken, toToken] = await Promise.all([
       this.getTokenInfo(fromTokenAddress),
       this.getTokenInfo(toTokenAddress),

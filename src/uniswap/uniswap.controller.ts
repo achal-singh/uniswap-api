@@ -21,6 +21,15 @@ export class UniswapController {
           .json({ message: 'Invalid token address format.' });
       }
 
+      const parsedAmount = parseFloat(amountIn);
+      if (parsedAmount === 0)
+        return res.status(HttpStatus.OK).json({ estimatedAmountOut: '0' });
+      if (!amountIn || isNaN(parsedAmount) || parsedAmount < 0) {
+        return res.status(HttpStatus.BAD_REQUEST).json({
+          message: 'Invalid amountIn: must be a positive number string.',
+        });
+      }
+
       const estimatedAmountOut =
         await this.uniswapService.getEstimatedUniswapReturn(
           fromTokenAddress,

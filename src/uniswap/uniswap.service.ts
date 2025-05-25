@@ -240,7 +240,10 @@ export class UniswapService implements OnModuleInit {
       );
 
       if (quote.mul(100).div(meta.reserveOut).gte(90)) {
-        throw new Error('Cannot process quote for this pair.');
+        // This block is reached most likely when the input amount is absurdly big
+        throw new Error(
+          'Cannot process quote for this pair. Input amount maybe too high.',
+        );
       }
 
       const {
@@ -250,6 +253,7 @@ export class UniswapService implements OnModuleInit {
         decimalOut: decimalWETH,
       } = meta;
 
+      // Computing the resulting amount including the swap fees of 0.3% by Uniswap
       const amountInRaw = parseUnits(amountIn, decimalIn);
       const amountInWithFee = amountInRaw.mul(997);
       const numerator = amountInWithFee.mul(reserveWETH);
@@ -260,6 +264,7 @@ export class UniswapService implements OnModuleInit {
         decimalWETH,
       );
 
+      // Recursively calling getEstimatedUniswapReturn to get the final output of WETH --> Destination/To Token
       const finalAmountOut = await this.getEstimatedUniswapReturn(
         TOKENS.WETH.address,
         toTokenAddress,

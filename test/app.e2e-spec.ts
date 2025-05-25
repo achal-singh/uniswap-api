@@ -2,13 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { ethers } from 'ethers';
 import * as request from 'supertest';
-import { AppModule } from './../src/app.module'; // Adjust path as per your project structure
+import { AppModule } from '../src/app.module';
 
-describe('AppController (e2e)', () => {
+describe('App', () => {
   let app: INestApplication;
 
-  const REAL_WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'; // Mainnet WETH
-  const REAL_USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'; // Mainnet USDC
+  const REAL_WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+  const REAL_USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -25,7 +25,7 @@ describe('AppController (e2e)', () => {
 
   // --- E2E Test Cases for /gasPrice endpoint ---
   describe('/gasPrice (GET)', () => {
-    it('should return the current gas price as a positive number string', () => {
+    it('Should return the current Gas price as a positive number string', () => {
       return request(app.getHttpServer())
         .get('/gasPrice')
         .expect(200)
@@ -46,7 +46,7 @@ describe('AppController (e2e)', () => {
 
   // --- E2E Test Cases for /return/:fromTokenAddress/:toTokenAddress/:amountIn endpoint ---
   describe('/return/:fromTokenAddress/:toTokenAddress/:amountIn (GET)', () => {
-    it('should return an estimated output amount for a valid WETH to USDC swap', async () => {
+    it('Should return an estimated output amount for a valid WETH to USDC swap', async () => {
       const amountIn = '1';
 
       return request(app.getHttpServer())
@@ -63,7 +63,7 @@ describe('AppController (e2e)', () => {
         });
     });
 
-    it('should return 0 if amountIn is 0', () => {
+    it('Should return 0 if amountIn is 0', () => {
       const amountIn = '0.0';
       return request(app.getHttpServer())
         .get(`/return/${REAL_WETH_ADDRESS}/${REAL_USDC_ADDRESS}/${amountIn}`)
@@ -74,7 +74,7 @@ describe('AppController (e2e)', () => {
         });
     });
 
-    it('should return an error for invalid token address format', () => {
+    it('Should return an error for invalid token address format', () => {
       const invalidAddress = '0xinvalid'; // Malformed address
       const amountIn = '1.0';
 
@@ -87,7 +87,7 @@ describe('AppController (e2e)', () => {
         });
     });
 
-    it('should return an error if any of the token addresses is not a valid ERC-20 address', () => {
+    it('Should return an error if any of the token addresses is not a valid ERC-20 address', () => {
       const tokenA = '0xdAC17F958D2ee523a2206206994597C13D831ec7';
       const tokenB = '0x73f7b1184B5cD361cC0f7654998953E2a251dd58';
       const amountIn = '1.0';
@@ -103,7 +103,7 @@ describe('AppController (e2e)', () => {
         });
     });
 
-    it('should return an error for invalid amountIn format', () => {
+    it(`Should return an error for invalid ":amountIn" format`, () => {
       const amountIn = 'not-a-number';
       return request(app.getHttpServer())
         .get(`/return/${REAL_WETH_ADDRESS}/${REAL_USDC_ADDRESS}/${amountIn}`)

@@ -39,17 +39,14 @@ export class GasService implements OnModuleInit {
   private async fetchAndCacheGasPrice() {
     try {
       const feeData = await this.provider.getFeeData();
-      const gasPriceGwei = utils.formatUnits(
-        feeData.gasPrice as BigNumber,
-        'gwei',
-      );
-      if (gasPriceGwei) {
-        this.cachedGasPrice = gasPriceGwei.toString();
-        this.lastFetchTime = Date.now();
-        this.logger.log(`Gas price cached: ${this.cachedGasPrice}`);
-      } else {
+      if (!feeData?.gasPrice) {
         this.logger.warn('Could not retrieve gas price from RPC.');
+        return;
       }
+      const gasPriceGwei = utils.formatUnits(feeData.gasPrice, 'gwei');
+      this.cachedGasPrice = gasPriceGwei.toString();
+      this.lastFetchTime = Date.now();
+      this.logger.log(`Gas price cached: ${this.cachedGasPrice}`);
     } catch (error) {
       this.logger.error('Error fetching gas price: ', error);
     }

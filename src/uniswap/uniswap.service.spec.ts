@@ -11,7 +11,7 @@ import { ethers } from 'ethers';
 import { TOKENS } from '../common/constants/tokens';
 
 // Setting higher timeout to be safe as real RPC is being called
-jest.setTimeout(10_000);
+jest.setTimeout(20_000);
 
 describe('UniswapService (with real RPC)', () => {
   let service: UniswapService;

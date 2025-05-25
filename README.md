@@ -31,7 +31,7 @@ This NestJS backend hosts two API routes:
     PORT = 3000
 
     # Ethereum RPC URL (Required!)
-    ALCHEMY_RPC_URL=<YOU_RPC_URL>
+    RPC_URL=<YOU_RPC_URL>
 
     # Gas price cache TTL in milliseconds (default: 5000)
     GAS_CACHE_TTL_MS=5000
@@ -73,7 +73,7 @@ This endpoint provides real-time gas price information from the Ethereum network
    - Connects to Ethereum network using Alchemy RPC.
    - Fetches current gas price using **`ethers.provider.getFeeData()`**.
    - Converts gas price from **wei** to **gwei** for better readability.
-   - Gas price is cached and refreshed in every **5s** (default), can be changed via **`GAS_CACHE_TTL_MS`** in **`.env`**.
+   - Gas price is refreshed and cached in every **5s** (default), refresh interval can be changed via **`GAS_CACHE_TTL_MS`** in **`.env`**.
 
 3. **Response**:
 
@@ -126,10 +126,11 @@ This endpoint calculates the estimated return amount for a token swap on Uniswap
 3. **Response**:
 
    ```json
-   GET /return/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/1
+   // 1000 1INCH --> WETH
+   GET /return/0x111111111117dC0aa78b770fA6A738034120C302/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2/1000
 
    {
-      "estimatedAmountOut": "41.729090866854752014"
+      "estimatedAmountOut": "0.087341657233937753"
    }
    ```
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Res, HttpStatus, Logger } from '@nestjs/common';
 import { Response } from 'express';
 import { GasService } from './gas.service';
 import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
@@ -14,6 +14,7 @@ class GasPriceResponse {
 @ApiTags('GasPrice')
 @Controller('gasPrice')
 export class GasController {
+  private readonly logger = new Logger(GasController.name);
   constructor(private readonly gasService: GasService) {}
 
   @Get()
@@ -26,7 +27,7 @@ export class GasController {
       const gasPriceInGwei = await this.gasService.getRecentGasPrice();
       return res.status(HttpStatus.OK).json({ gasPriceInGwei });
     } catch (error) {
-      console.error('Error fetching gas price:', error);
+      this.logger.error('Error fetching gas price:', error);
       return res
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
         .json({ message: 'Failed to retrieve gas price.' });

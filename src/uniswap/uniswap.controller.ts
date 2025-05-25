@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Res, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Res,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { isAddress } from 'ethers/lib/utils';
 import { Response } from 'express';
 import { UniswapService } from './uniswap.service';
@@ -15,6 +22,7 @@ class SwapEstimateResponse {
 @ApiTags('Uniswap V2')
 @Controller('return')
 export class UniswapController {
+  private readonly logger = new Logger(UniswapController.name);
   constructor(private readonly uniswapService: UniswapService) {}
 
   @Get(':fromTokenAddress/:toTokenAddress/:amountIn')
@@ -69,7 +77,7 @@ export class UniswapController {
         );
       return res.status(HttpStatus.OK).json({ estimatedAmountOut });
     } catch (error) {
-      console.error('Error getting Uniswap return:', error);
+      this.logger.error('Error getting Uniswap return:', error);
       if (error instanceof Error) {
         return res
           .status(HttpStatus.INTERNAL_SERVER_ERROR)

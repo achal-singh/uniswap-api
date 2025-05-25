@@ -9,19 +9,34 @@ import {
   ERC20_ABI,
   UNISWAP_V2_FACTORY_ABI,
   UNISWAP_V2_PAIR_ABI,
-} from 'src/common/constants/tokens';
+} from '../common/constants/tokens';
 
-interface TokenDetails {
-  address: string;
+export interface TokenDetails {
   symbol: string;
-  name: string;
   decimals: number;
+}
+
+export interface PairReserveInfo {
+  reserve0: BigNumber;
+  reserve1: BigNumber;
+  token0: string;
+  token1: string;
+}
+
+export interface QuoteInfo {
+  quote: BigNumber;
+  meta: {
+    reserveOut: BigNumber;
+    reserveIn: BigNumber;
+    decimalIn: number;
+    decimalOut: number;
+  };
 }
 
 @Injectable()
 export class UniswapService implements OnModuleInit {
   private readonly logger = new Logger(UniswapService.name);
-  private tokenCache: Map<string, Partial<TokenDetails>> = new Map();
+  private tokenCache: Map<string, TokenDetails> = new Map();
   private provider: ethers.providers.JsonRpcProvider;
   private uniswapV2Factory: ethers.Contract;
   private readonly uniswapV2FactoryAddress: string;
@@ -46,7 +61,7 @@ export class UniswapService implements OnModuleInit {
   /**
    * Fetches basic meta data of an ERC-20 Token from Ethereum.
    * */
-  async getTokenInfo(tokenAddress: string): Promise<Partial<TokenDetails>> {
+  async getTokenInfo(tokenAddress: string): Promise<TokenDetails> {
     try {
       if (this.tokenCache.has(tokenAddress)) {
         const data = this.tokenCache.get(tokenAddress)!;
@@ -69,7 +84,7 @@ export class UniswapService implements OnModuleInit {
       this.tokenCache.set(tokenAddress, { decimals, symbol });
       return { decimals, symbol };
     } catch (error) {
-      this.logger.error(error.message);
+      this.logger.error(error);
       throw new Error('Token address(es) are not valid ERC-20 Contracts.');
     }
   }
@@ -80,7 +95,10 @@ export class UniswapService implements OnModuleInit {
    * @param fromTokenAddress: Source token address
    * @param toTokenAddress: Destination token address
    * */
-  async getPairReserves(fromTokenAddress: string, toTokenAddress: string) {
+  async getPairReserves(
+    fromTokenAddress: string,
+    toTokenAddress: string,
+  ): Promise<PairReserveInfo> {
     try {
       const pairAddress: string = await this.uniswapV2Factory.getPair(
         fromTokenAddress,
@@ -107,9 +125,12 @@ export class UniswapService implements OnModuleInit {
         token0,
         token1,
       };
-    } catch (error) {
-      this.logger.error(error.message);
-      throw new Error('Something went wrong in getPairReserves().');
+    } catch (error: any) {
+      if (error instanceof Error) {
+        this.logger.error(`${error.message}`);
+        throw new Error(`getPairReserves() failed: ${error.message}`);
+      }
+      throw new Error('getPairReserves() failed with an unknown error.');
     }
   }
 
@@ -124,7 +145,7 @@ export class UniswapService implements OnModuleInit {
     fromTokenAddress: string,
     toTokenAddress: string,
     amountIn: string,
-  ) {
+  ): Promise<QuoteInfo> {
     try {
       const { reserve0, reserve1, token0, token1 } = await this.getPairReserves(
         fromTokenAddress.toLowerCase(),
@@ -145,13 +166,13 @@ export class UniswapService implements OnModuleInit {
       if (token0.toLowerCase() === fromTokenAddress.toLowerCase()) {
         reserveIn = reserve0;
         reserveOut = reserve1;
-        decimalIn = token0Info.decimals as number;
-        decimalOut = token1Info.decimals as number;
+        decimalIn = token0Info.decimals;
+        decimalOut = token1Info.decimals;
       } else if (token1.toLowerCase() === fromTokenAddress.toLowerCase()) {
         reserveIn = reserve1;
         reserveOut = reserve0;
-        decimalIn = token1Info.decimals as number;
-        decimalOut = token0Info.decimals as number;
+        decimalIn = token1Info.decimals;
+        decimalOut = token0Info.decimals;
       } else {
         throw new Error('Token addresses do not match the pair contract.');
       }
@@ -162,9 +183,12 @@ export class UniswapService implements OnModuleInit {
       );
       const quote = amountInWei.mul(reserveOut).div(reserveIn);
       return { quote, meta: { reserveOut, reserveIn, decimalIn, decimalOut } };
-    } catch (error) {
-      this.logger.error(error.message);
-      throw new Error('Something went wrong in getQuote().');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(`${error.message}`);
+        throw new Error(`getQuote() failed: ${error.message}`);
+      }
+      throw new Error('getQuote() failed with an unknown error.');
     }
   }
 

@@ -5,6 +5,12 @@ export const TOKENS = {
     name: 'Wrapped Ether',
     decimals: 18,
   },
+  ONE_INCH: {
+    address: '0x111111111117dC0aa78b770fA6A738034120C302',
+    symbol: '1INCH',
+    name: '1inch Token',
+    decimals: 18,
+  },
 };
 
 export const UNISWAP_V2_PAIR_ABI = [

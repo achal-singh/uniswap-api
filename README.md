@@ -137,8 +137,9 @@ This endpoint calculates the estimated return amount for a token swap on Uniswap
 
 | Script               | Description                                                                                        |
 | -------------------- | -------------------------------------------------------------------------------------------------- |
+| `npm run test`       | Run a suite of **unit tests**.                                                                     |
+| `npm run test:e2e`   | Run a suite of **End-to-End (E2E) integration tests**.                                             |
 | `npm run test:debug` | Launch Jest in debug mode with Node.js inspector enabled. Useful for setting breakpoints in tests. |
-| `npm run test:e2e`   | Run a suite of **6** end-to-end (e2e) integration tests.                                           |
 
 ## 🚫 Restrictions
 
